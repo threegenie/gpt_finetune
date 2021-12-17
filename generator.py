@@ -21,7 +21,7 @@ parser.add_argument('--loops', type=int, default=-1,
 					help="글을 몇 번 반복할지 지정합니다. -1은 무한반복입니다.")
 parser.add_argument('--tmp_sent', type=str, default="사랑",
 					help="글의 시작 문장입니다.")
-parser.add_argument('--load_path', type=str, default="./checkpoint/ent/KoGPT2_checkpoint_37000.tar",
+parser.add_argument('--load_path', type=str, default="./checkpoint/Alls/KoGPT2_checkpoint_296000.tar",
 					help="학습된 결과물을 저장하는 경로입니다.")
 
 args = parser.parse_args()
@@ -43,13 +43,6 @@ kogpt2_config = {
 	"n_positions": 1024,
 	"vocab_size": 50000
 }
-
-def auto_enter(text):
-	text = (text.replace("   ", "\n"))
-	text = text.split("\n")
-
-	text = [t.lstrip() for t in text if t != '']
-	return "\n\n".join(text)
 
 def main(temperature = 0.7, top_p = 0.8, top_k = 40, tmp_sent = "", text_size = 100, loops = 0, load_path = ""):
 	ctx = 'cuda'
@@ -95,18 +88,6 @@ def main(temperature = 0.7, top_p = 0.8, top_k = 40, tmp_sent = "", text_size = 
 	else:
 		num = 0
 
-	try:
-		load_path.split("/")[-2]
-	except:
-		pass
-	else:
-		load_path = load_path.split("/")[-2]
-
-	print("ok : ",load_path)
-
-	if not(os.path.isdir("samples/"+ load_path)):
-		os.makedirs(os.path.join("samples/"+ load_path))
-
 	while 1:
 		sent =''
 		if tmp_sent == "":
@@ -119,28 +100,21 @@ def main(temperature = 0.7, top_p = 0.8, top_k = 40, tmp_sent = "", text_size = 
 			break
 
 		sent = sample_sequence(model, tok, vocab, sent, text_size, temperature, top_p, top_k)
-		sent = sent.replace("//", "\n") # 비효율적이지만 엔터를 위해서 등장
-		sent = sent.replace("</s>", "") 
-		sent = auto_enter(sent)
+		sent = sent.replace("<unused0>", "\n")
+		
 		print(sent)
 
-		now = [int(n) for n in os.listdir("./samples/" + load_path)]
-		
-		try:
-			now = max(now)
-		except:
-			now = 1
-
-		f = open("samples/"+ load_path + "/" + str(now + 1), 'w', encoding="utf-8")
-		
+		now = [int(n) for n in os.listdir("./samples")]
+		now = max(now)
+		f = open("samples/" + str(now + 1), 'w', encoding="utf-8")
 		head = [load_path, tmp_sent, text_size, temperature, top_p, top_k]
 		head = [str(h) for h in head]
 		f.write(",".join(head))
-		f.write(",")
+		f.write("\n")
 		f.write(sent)
 		f.close()
 
-		#tmp_sent = ""
+		tmp_sent = ""
 
 		if num != 0:
 			num += 1

@@ -7,15 +7,8 @@ from kogpt2.utils import download, tokenizer
 from kogpt2.model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
 import gluonnlp
 
-def auto_enter(text):
-	text = (text.replace("   ", "\n"))
-	text = text.split("\n")
-
-	text = [t.lstrip() for t in text if t != '']
-	return "\n\n".join(text)
-
 def main(temperature = 0.7, top_p = 0.8, top_k = 40, tmp_sent = "", text_size = 100, loops = -1,
-	load_path = './checkpoint/KoGPT2_checkpoint_long.tar', ctx= 'cuda',cachedir='~/kogpt2/', samples="./gdrive/My Drive/KoGPT2-FineTuning_pre/samples/"):
+	load_path = './checkpoint/KoGPT2_checkpoint_long.tar', ctx= 'cuda',cachedir='~/kogpt2/', samples="gdrive/drive/My Drive/KoGPT2-FineTuning/samples"):
 
 	pytorch_kogpt2 = {
 		'url': 'https://kobert.blob.core.windows.net/models/kogpt2/pytorch/pytorch_kogpt2_676e9bcfa7.params',
@@ -66,63 +59,35 @@ def main(temperature = 0.7, top_p = 0.8, top_k = 40, tmp_sent = "", text_size = 
 															  eos_token='</s>')
 
 	tok_path = get_tokenizer()
-
 	model, vocab = kogpt2model, vocab_b_obj
 	tok = SentencepieceTokenizer(tok_path)
 	num = 0
 
-	if loops:
+	if loops != -1:
 		num = 1
-	else:
-		num = 0
-
-	try:
-		load_path.split("/")[-2]
-	except:
-		pass
-	else:
-		load_path = load_path.split("/")[-2]
-
-	print("ok : ", load_path)
 
 	while 1:
 		sent =''
 		if tmp_sent == "":
 			tmp_sent = input('input : ')
-		sent = sent + tmp_sent
+		sent = sent+tmp_sent
 
 		toked = tok(sent)
 
 		if len(toked) > 1022:
 			break
 
-		# 실제 생성 코드 top_x 상위 x개 만 사전에서 가져오기
 		sent = sample_sequence(model, tok, vocab, sent, text_size, temperature, top_p, top_k)
-
-		sent = sent.replace("//", "\n") # 비효율적이지만 엔터를 위해서 등장
-		sent = sent.replace("</s>", "") 
-		sent = auto_enter(sent)
+		sent = sent.replace("<unused0>", "\n")
 		print(sent)
 
-		now = [int(n) for n in os.listdir(samples + load_path)]
-		
-		try:
-			now = max(now)
-		except:
-			now = 1
-
-		f = open(samples + load_path + "/" + str(now + 1), 'w', encoding="utf-8")
-		
-		head = [load_path, tmp_sent, text_size, temperature, top_p, top_k]
-		head = [str(h) for h in head]
-		f.write(",".join(head))
-		f.write(",")
+		now = [int(n) for n in os.listdir(samples)]
+		now = max(now)
+		f = open(samples + str(now + 1), 'w', encoding="utf-8")
 		f.write(sent)
 		f.close()
 
-		#tmp_sent = ""
-
-		if num != 0:
+		if num:
 			num += 1
 			if num >= loops:
 				print("good")
